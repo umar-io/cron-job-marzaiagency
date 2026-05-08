@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "csv-parse": "^6.2.1",
     "csv-stringify": "^6.7.0"
   },
@@ -7,7 +8,6 @@
   "version": "1.0.0",
   "description": "",
   "main": "sale-cron.js",
-  "devDependencies": {},
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

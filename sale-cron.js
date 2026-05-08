@@ -8,6 +8,7 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const LANDING_PAGE_URL = 'https://umard3v.vercel.app'; // Replace!
+const CITIES_ROTATION = ['Chicago', 'Houston', 'Austin', 'San Francisco', 'Denver'];
 const SENDER_EMAIL = 'marzaiagency@outlook.com'; // Your from email
 
 const groq = new Groq({ apiKey: GROQ_API_KEY });
@@ -83,21 +84,22 @@ INPUT: ${JSON.stringify(agency)}`;
 
 // Filter + select 10 new daily
 function selectDailyAgencies(data, sentToday, limit = 10) {
+    const city = CITIES_ROTATION[new Date().getDay() % CITIES_ROTATION.length];
     const keywords = ['real estate', 'property', 'realtor', 'agent'];
     const candidates = data
-        .filter(row => row.city === 'Houston' && keywords.some(kw => row.category?.toLowerCase().includes(kw)))
+        .filter(row => row.city === city && keywords.some(kw => row.category?.toLowerCase().includes(kw)))
         .map(row => ({ ...row, googlestars: parseFloat(row.googlestars) || 0 }))
         .sort((a, b) => b.googlestars - a.googlestars)
         .filter(a => !sentToday.some(s => s.email === a.email)); // Skip sent today
 
-    return candidates.slice(0, limit);
+    return { agencies: candidates.slice(0, limit), city };
 }
 
 // Telegram notifier
 async function sendTelegram(summary, isTest = false) {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
     const prefix = isTest ? "🧪 *TEST MODE*\n" : "🚀 *Daily Outreach*\n";
-    const message = `${prefix}#${new Date().toDateString()}\n\n✅ *${summary.count}* AI pitches generated\n💰 Top: ${summary.top?.name} (${summary.top?.googlestars}⭐)\n📊 n8n ready: houston_outreach.csv\n\n${summary.samples.slice(0, 3).map(s => `• ${s.name}`).join('\n')}`;
+    const message = `${prefix}#${new Date().toDateString()}\n\n📍 City: *${summary.city}*\n✅ *${summary.count}* AI pitches generated\n💰 Top: ${summary.top?.name} (${summary.top?.googlestars}⭐)\n📊 n8n ready: outreach_${summary.city.toLowerCase()}.csv\n\n${summary.samples.slice(0, 3).map(s => `• ${s.name}`).join('\n')}`;
     const data = JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: 'Markdown' });
     return new Promise(res => {
         const req = https.request({
@@ -112,7 +114,7 @@ async function sendTelegram(summary, isTest = false) {
 async function runCron(isTest = false) {
     const data = await loadData();
     const sentToday = await getSentToday();
-    const agencies = selectDailyAgencies(data, sentToday, isTest ? 1 : 10);
+    const { agencies, city } = selectDailyAgencies(data, sentToday, isTest ? 1 : 10);
 
     const outreach = [];
     for (const agency of agencies) {
@@ -124,17 +126,18 @@ async function runCron(isTest = false) {
         }
     }
 
-    await fs.writeFile('houston_outreach.csv', stringify(outreach, { header: true }));
+    await fs.writeFile(`outreach_${city.toLowerCase()}.csv`, stringify(outreach, { header: true }));
     await fs.writeFile('houston_outreach.json', JSON.stringify(outreach, null, 2));
 
     const summary = {
         count: outreach.length,
+        city,
         top: outreach[0],
         samples: outreach.slice(0, 3)
     };
     await sendTelegram(summary, isTest);
 
-    console.log(`✅ Cron: ${outreach.length}/10 Houston agencies processed`);
+    console.log(`✅ Cron: ${outreach.length}/10 ${city} agencies processed`);
     return outreach;
 }
 
