@@ -2,37 +2,15 @@ import fs from 'fs/promises';
 import https from 'https';
 import { parse } from 'csv-parse/sync';
 import Groq from 'groq-sdk';
-import nodemailer from 'nodemailer';
+import { transporter, testConfig } from '../node-mailer-config.js';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const BREVO_SMTP_KEY = process.env.BREVO_SMTP_KEY;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID;
 const LANDING_PAGE_URL = 'https://umard3v.vercel.app';
 const FROM_EMAIL = 'aa9dac001@smtp-brevo.com'; // Must be Brevo-verified
 
-// ✅ YOUR BREVO CONFIG - INLINE
-const transporter = nodemailer.createTransport({
-    host: 'smtp-relay.brevo.com',
-    port: 587,
-    auth: {
-        user: process.env.SMTP_USER || FROM_EMAIL,  // Your sender OR aa9dac001@smtp-brevo.com
-        pass: BREVO_SMTP_KEY  // xsmtp... key from Brevo SMTP tab
-    }
-});
-
 const groq = new Groq({ apiKey: GROQ_API_KEY });
-
-// Test Brevo SMTP
-async function testConfig() {
-    try {
-        await transporter.verify();
-        return true;
-    } catch (err) {
-        console.error('Brevo SMTP Error:', err);
-        return false;
-    }
-}
 
 async function loadData() {
     try {
@@ -104,8 +82,14 @@ async function runCron(isTest) {
     const city = cities[new Date().getDay() % cities.length];
     const limit = isTest ? 1 : 10;
 
+    console.log(`Targeting City: ${city}`);
+
     const agencies = data
-        .filter(row => row.city === city && keywords.some(kw => row.category?.toLowerCase().includes(kw)))
+        .filter(row => {
+            const rowCity = (row.city || row.City || "").trim().toLowerCase();
+            const rowCategory = (row.category || row.Category || "").toLowerCase();
+            return rowCity === city.toLowerCase() && keywords.some(kw => rowCategory.includes(kw));
+        })
         .map(row => ({ ...row, googlestars: parseFloat(row.googlestars) || 0 }))
         .sort((a, b) => b.googlestars - a.googlestars)
         .filter(a => !sentTodayCache.some(s => s.email === a.email))
@@ -126,7 +110,7 @@ async function runCron(isTest) {
         samples: outreach.slice(0, 3)
     };
     await sendTelegram(summary, isTest);
-    return outreach;
+    return { outreach, city };
 }
 
 export default async function handler(req, res) {
@@ -136,12 +120,12 @@ export default async function handler(req, res) {
     if (!smtpOk && !isTest)
         return res.status(500).json({ error: 'Brevo SMTP_KEY missing' });
 
-    const result = await runCron(isTest);
+    const { outreach, city } = await runCron(isTest);
     res.json({
         success: true,
         brevo: smtpOk ? '300/day OK' : 'Config error',
-        sent: result.filter(r => r.send_result.sent).length,
-        total: result.length,
-        city: result[0]?.city
+        sent: outreach.filter(r => r.send_result.sent).length,
+        total: outreach.length,
+        city: city
     });
 }
