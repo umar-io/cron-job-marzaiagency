@@ -15,7 +15,7 @@ export const transporter = nodemailer.createTransport({
     host: 'smtp-relay.brevo.com',
     port: 587,
     auth: {
-        user: 'marzaiagency@outlook.com',
+        user: process.env.SMTP_USER || 'aa9dac001@smtp-brevo.com',
         pass: process.env.BREVO_SMTP_KEY
     },
     /*

@@ -57,14 +57,24 @@ async function generateSmartPitch(agency) {
 
 async function sendTelegram(summary, isTest = false) {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
-    const message = `🚀 *Daily Outreach*\n📍 City: ${summary.city}\n✅ Sent: ${summary.sent}`;
+
+    const prefix = isTest ? "🧪 *TEST MODE*\n" : "🚀 *Daily Outreach*\n";
+    const sampleText = summary.samples.map(s => `• ${s.name} (${s.googlestars}⭐)`).join('\n');
+
+    const message = `${prefix}` +
+        `📍 City: *${summary.city}*\n` +
+        `✅ Sent: *${summary.sent}/${summary.count}*\n` +
+        `💰 Top: *${summary.top?.name || 'N/A'}*\n\n` +
+        `*Leads:*\n${sampleText || 'None found'}`;
+
     const data = JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: 'Markdown' });
+
     return new Promise(res => {
         const req = https.request({
             hostname: 'api.telegram.org', path: `/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Content-Length': data.length }
         }, res);
-        req.write(data); req.end();
+        req.write(data); req.end(); res();
     });
 }
 
@@ -87,8 +97,6 @@ export default async function handler(req, res) {
     });
 }
 
-// Replace generateSmartPitch + add sendEmail
-// Replace SendGrid section with:
 async function sendEmail(agency, pitch) {
     const mailOptions = {
         from: `"Umar | MARZAI Agency" <${FROM_EMAIL}>`,
@@ -114,7 +122,7 @@ async function runCron(isTest = false) {
     const limit = isTest ? 1 : 10;
 
     // Rotate cities weekly (scale beyond Houston)
-    const cities = ['Houston', 'Dallas', 'Austin', 'San Antonio'];
+    const cities = ['Chicago', 'Houston', 'Austin', 'San Francisco', 'Denver'];
     const city = cities[new Date().getDay() % cities.length];
 
     const agencies = data
