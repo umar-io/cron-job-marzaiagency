@@ -19,7 +19,7 @@ async function loadData(csvPath = 'Agency-Owners-All-US-Markets.csv') {
         csv = await fs.readFile(csvPath, 'utf8');
     } catch {
         csv = await new Promise((res) => {
-            https.get('https://your-vercel-url/Agency-Owners-All-US-Markets.csv', (r) => {
+            https.get('https://cron-job-marzaiagency.vercel.app/Agency-Owners-All-US-Markets.csv', (r) => {
                 let data = ''; r.on('data', d => data += d); r.on('end', () => res(data));
             });
         });
