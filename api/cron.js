@@ -53,14 +53,14 @@ const getSentToday = () => sentTodayCache;
 const markSent = email => sentTodayCache.push({ email, date: new Date().toISOString().split('T')[0] });
 
 async function generateSmartPitch(agency) {
-    const prompt = `Umar MARZAI CTO. Real estate agency pitch. JSON: {"subject":"...", "body":"Hi [name].."} 5 sentences. ${LANDING_PAGE_URL}`;
+    const prompt = `Umar, CTO of MARZAI Agency. Pitch: We build high-conversion landing pages for real estate that turn visitors into leads/clients the moment they land. NO mention of "AI", "automation", or tech stacks. Focus on conversion results and lead generation. JSON: {"subject":"...", "body":"..."}. Max 5 sentences. Link: ${LANDING_PAGE_URL}`;
     const completion = await groq.chat.completions.create({
         messages: [{ role: 'system', content: prompt }, { role: 'user', content: JSON.stringify(agency) }],
         model: 'llama-3.1-70b-versatile', max_tokens: 250, temperature: 0.7
     });
 
     const content = completion.choices[0].message.content.match(/\{[\s\S]*\}/)?.[0] || '{}';
-    const { subject = '2x agency leads?', body = 'Hi! AI landing page demo?' } = JSON.parse(content);
+    const { subject = 'Question regarding your visitor conversion', body = 'Hi! I was looking at your site and wanted to show you how we turn more visitors into clients.' } = JSON.parse(content);
     return { subject, body };
 }
 

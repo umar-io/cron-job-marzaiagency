@@ -51,12 +51,13 @@ async function markSent(email) {
 
 // AI Pitch Generator (Groq Llama3.1-70B—fast/cheap)
 async function generateSmartPitch(agency) {
-    const systemPrompt = `You are Umar, CTO of MARZAI Agency, a solo AI sales machine targeting US real estate agencies.
+    const systemPrompt = `You are Umar, CTO of MARZAI Agency, specializing in high-performance lead generation for US real estate agencies.
 
 CRITICAL RULES:
 - SHORT: Subject <60 chars, Body <150 words (5 sentences max)
 - PERSONAL: Use agency name, city, stars, category. Sound excited/human.
-- VALUE: Pitch AI landing page + n8n workflow = "2x leads, automated follow-ups"
+- VALUE: Pitch highly-converting landing pages that turn website visitors into clients/leads instantly.
+- NO TECH: Do NOT mention "AI", "automation", "n8n", or "stack". Focus on conversion results.
 - URGENT: "Quick 5-min demo today?"
 - SIGN: "Umar (CTO) | MARZAI Agency | ${LANDING_PAGE_URL}"
 - NO FLUFF: Delete generic phrases. End with clear CTA.
@@ -76,8 +77,8 @@ INPUT: ${JSON.stringify(agency)}`;
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : content);
 
-    const subject = parsed.subject || 'Quick question regarding your agency';
-    const body = parsed.body || 'Hi, I saw your great reviews in Houston and wanted to reach out.';
+    const subject = parsed.subject || 'Improving visitor conversion for your agency';
+    const body = parsed.body || `Hi, I saw your great reviews in ${agency.city} and wanted to reach out about how we help agencies convert more visitors into clients.`;
 
     return { subject, body, status: 'AI-Generated', sent_date: new Date().toISOString().split('T')[0] };
 }
