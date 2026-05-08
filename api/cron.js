@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import https from 'https';
 import { parse } from 'csv-parse/sync';
-import Groq from '@groq-sdk/groq-sdk';
+import Groq from 'groq-sdk';
 import nodemailer from 'nodemailer';
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
